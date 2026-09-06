@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -93,11 +94,19 @@ def find_url(text: str) -> str | None:
     return match.group(0) if match else None
 
 
+def _debug_opts() -> dict:
+    """Включает verbose yt-dlp, когда YTDLP_DEBUG=1 — для диагностики PO-токенов."""
+    if os.getenv("YTDLP_DEBUG") not in ("1", "true", "True"):
+        return {}
+    return {"verbose": True, "logger": logging.getLogger("yt_dlp.debug")}
+
+
 def _probe(url: str) -> dict:
     """Смотрим метаданные не скачивая — чтобы отсеять длинное до загрузки."""
     opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "skip_download": True}
     opts.update(_auth_opts())
     opts.update(_pot_opts())
+    opts.update(_debug_opts())
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
