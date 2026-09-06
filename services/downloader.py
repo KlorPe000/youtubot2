@@ -65,6 +65,13 @@ def _pot_opts() -> dict:
     ("Client VISIONOS is not supported"). Скипаем ответ со страницы -> для web
     pr=None -> yt-dlp фетчит PLAYER токен через bgutil и вызывает player API
     уже с токеном.
+
+    `player_client` — несколько клиентов в порядке приоритета: YouTube по-разному
+    банит IP в зависимости от «ворот». Все перечисленные bgutil:http
+    поддерживает (WEB, MWEB, TVHTML5, WEB_EMBEDDED_PLAYER, WEB_CREATOR,
+    WEB_REMIX, TVHTML5_SIMPLY). yt-dlp пробует их по очереди и останавливается
+    на первом валидном player response; если все вернут LOGIN_REQUIRED, падает
+    с "All player responses are invalid".
     """
     if not POT_ENABLED:
         return {}
@@ -73,7 +80,15 @@ def _pot_opts() -> dict:
             "youtubepot-bgutilhttp": {"base_url": [POT_PROVIDER_URL]},
             "youtube": {
                 "fetch_pot": ["always"],
-                "player_client": ["web"],
+                "player_client": [
+                    "tv",
+                    "web_embedded",
+                    "web_creator",
+                    "web_music",
+                    "tv_simply",
+                    "mweb",
+                    "web",
+                ],
                 "webpage_skip": ["player_response"],
             },
         },
