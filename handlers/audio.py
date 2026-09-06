@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 
 from aiogram import F, Router
@@ -21,6 +22,12 @@ _slots = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
 
 # Кто прямо сейчас что-то качает — чтобы один человек не занял оба слота.
 _busy: set[int] = set()
+
+
+def _safe_filename(name: str) -> str:
+    """Имя трека в имени файла: приятнее, чем id видео."""
+    cleaned = re.sub(r'[\\/:*?"<>|]', "_", name).strip()
+    return (cleaned or "audio")[:100]
 
 
 @router.message(CommandStart())
@@ -57,7 +64,7 @@ async def handle_link(message: Message) -> None:
 
             await status.edit_text("Отправляю…")
             await message.answer_audio(
-                FSInputFile(track.path),
+                FSInputFile(track.path, filename=f"{_safe_filename(track.title)}.mp3"),
                 title=track.title,
                 performer=track.artist,
                 duration=track.duration or None,

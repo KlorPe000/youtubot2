@@ -18,6 +18,7 @@ from pathlib import Path
 import yt_dlp
 
 from config import (
+    COOKIES_FILE,
     DOWNLOAD_DIR,
     FALLBACK_BITRATE,
     MAX_DURATION_SEC,
@@ -26,6 +27,22 @@ from config import (
 )
 
 log = logging.getLogger(__name__)
+
+
+def _auth_opts() -> dict:
+    """Cookies и форсированный IPv4 — то, что нужно только на сервере.
+
+    С домашнего IP YouTube отдаёт видео без вопросов. С серверного часто
+    требует подтверждения, что ты не бот, и cookies залогиненного аккаунта
+    это снимают. Локально файла нет и опции просто не добавляются.
+    """
+    opts: dict = {}
+    if COOKIES_FILE and Path(COOKIES_FILE).is_file():
+        opts["cookiefile"] = COOKIES_FILE
+        # На серверах IPv6 чаще попадает в чёрные списки, чем IPv4.
+        opts["source_address"] = "0.0.0.0"
+    return opts
+
 
 YOUTUBE_URL_RE = re.compile(
     r"https?://(?:www\.|m\.|music\.)?"
@@ -60,6 +77,7 @@ def find_url(text: str) -> str | None:
 def _probe(url: str) -> dict:
     """Смотрим метаданные не скачивая — чтобы отсеять длинное до загрузки."""
     opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "skip_download": True}
+    opts.update(_auth_opts())
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
@@ -138,6 +156,7 @@ def download(url: str) -> Track:
             {"key": "EmbedThumbnail", "already_have_thumbnail": False},
         ],
     }
+    opts.update(_auth_opts())
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:

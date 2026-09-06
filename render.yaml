@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: yt2mp3-bot
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      # Значение задаётся вручную в панели Render, в репозиторий не попадает.
+      - key: BOT_TOKEN
+        sync: false
+      # Путь к secret file с cookies YouTube. Файл создаётся в панели Render.
+      - key: COOKIES_FILE
+        value: /etc/secrets/cookies.txt
