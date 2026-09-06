@@ -21,6 +21,18 @@ PORT = int(os.getenv("PORT", "0"))
 # cookies залогиненного аккаунта это снимают. Локально не нужен.
 COOKIES_FILE = os.getenv("COOKIES_FILE", "").strip()
 
+# PO-токен: адрес HTTP-сервера bgutil-ytdlp-pot-provider, который генерирует
+# proof-of-origin токен для запросов к YouTube. На сервере поднимается рядом
+# с ботом в том же контейнере, поэтому по умолчанию локальный адрес.
+POT_PROVIDER_URL = os.getenv("POT_PROVIDER_URL", "http://127.0.0.1:4416").strip()
+POT_ENABLED = os.getenv("POT_ENABLED", "1") not in ("0", "false", "False")
+
+# Сервер PO-токена собирается из исходников. Путь к собранному entrypoint-скрипту.
+# По умолчанию предполагается структура сборки из Dockerfile.
+POT_SERVER_CMD = os.getenv(
+    "POT_SERVER_CMD", "/opt/pot-provider/server/build/main.js"
+).strip()
+
 # Telegram не даёт боту отправить файл больше 50 МБ.
 # Берём 45 с запасом на метаданные и обложку.
 MAX_FILE_MB = 45

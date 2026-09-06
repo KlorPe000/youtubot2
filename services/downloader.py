@@ -23,6 +23,8 @@ from config import (
     FALLBACK_BITRATE,
     MAX_DURATION_SEC,
     MAX_FILE_MB,
+    POT_ENABLED,
+    POT_PROVIDER_URL,
     PRIMARY_BITRATE,
 )
 
@@ -42,6 +44,23 @@ def _auth_opts() -> dict:
         # На серверах IPv6 чаще попадает в чёрные списки, чем IPv4.
         opts["source_address"] = "0.0.0.0"
     return opts
+
+
+def _pot_opts() -> dict:
+    """Направляем yt-dlp к локальному генератору PO-токенов.
+
+    Плагин `bgutil-ytdlp-pot-provider` (уже в requirements.txt) умеет ходить
+    за proof-of-origin токеном к HTTP-серверу и по умолчанию уже знает адрес
+    127.0.0.1:4416. Здесь мы лишь явно задаём адрес и включаем механизм —
+    это убирает блокировку "Sign in to confirm you're not a bot" с серверных IP.
+    """
+    if not POT_ENABLED:
+        return {}
+    return {
+        "extractor_args": {
+            "youtubepot-bgutilhttp": {"base_url": [POT_PROVIDER_URL]},
+        },
+    }
 
 
 YOUTUBE_URL_RE = re.compile(
@@ -78,6 +97,7 @@ def _probe(url: str) -> dict:
     """Смотрим метаданные не скачивая — чтобы отсеять длинное до загрузки."""
     opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "skip_download": True}
     opts.update(_auth_opts())
+    opts.update(_pot_opts())
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
@@ -157,6 +177,7 @@ def download(url: str) -> Track:
         ],
     }
     opts.update(_auth_opts())
+    opts.update(_pot_opts())
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:

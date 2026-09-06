@@ -17,6 +17,7 @@ from aiohttp import web
 
 import config
 from handlers.audio import router
+from services.pot_provider import run_pot_provider, stop_pot_provider
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +64,10 @@ async def main() -> None:
 
     runner = await start_health_server(config.PORT) if config.PORT else None
 
+    # Поднимаем локальный генератор PO-токенов. Если его нет (локально) —
+    # просто работаем без него.
+    pot_proc = await run_pot_provider()
+
     bot = Bot(token=config.BOT_TOKEN)
     dp = Dispatcher()
     dp.include_router(router)
@@ -77,6 +82,7 @@ async def main() -> None:
         await dp.start_polling(bot)
     finally:
         await bot.session.close()
+        await stop_pot_provider(pot_proc)
         if runner:
             await runner.cleanup()
         shutil.rmtree(config.DOWNLOAD_DIR, ignore_errors=True)

@@ -9,6 +9,8 @@ services:
       # Значение задаётся вручную в панели Render, в репозиторий не попадает.
       - key: BOT_TOKEN
         sync: false
-      # Путь к secret file с cookies YouTube. Файл создаётся в панели Render.
-      - key: COOKIES_FILE
-        value: /etc/secrets/cookies.txt
+      # PO-токены включены по умолчанию — сервер поднимается сам в контейнере.
+      # Только если YouTube всё равно блокирует, можно дополнительно задать
+      # COOKIES_FILE, см. README (закомментировано ниже).
+      # - key: COOKIES_FILE
+      #   value: /etc/secrets/cookies.txt
