@@ -105,7 +105,11 @@ def _debug_opts() -> dict:
     """Включает verbose yt-dlp, когда YTDLP_DEBUG=1 — для диагностики PO-токенов."""
     if os.getenv("YTDLP_DEBUG") not in ("1", "true", "True"):
         return {}
-    return {"verbose": True, "logger": logging.getLogger("yt_dlp.debug")}
+    # main.py ставит root-логгер на INFO — без этого DEBUG-строки yt-dlp
+    # (генерация PO-токена, ошибки провайдера) молча отфильтровываются.
+    logger = logging.getLogger("yt_dlp.debug")
+    logger.setLevel(logging.DEBUG)
+    return {"verbose": True, "logger": logger}
 
 
 def _probe(url: str) -> dict:

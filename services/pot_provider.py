@@ -44,6 +44,23 @@ def _wait_for_server(url: str, timeout: float = 30.0) -> None:
     raise PotProviderError(f"сервер PO-токенов не ответил на {url}/ping за {timeout:.0f}s")
 
 
+async def _drain_stderr(proc: asyncio.subprocess.Process) -> None:
+    """Дренируем stderr сервера и логируем его строки.
+
+    Без этого stderr-буфер канала может переполниться и сервер зависнет,
+    а ошибки генерации токенов (/get_pot) будут теряться.
+    """
+    assert proc.stderr is not None
+    try:
+        while True:
+            line = await proc.stderr.readline()
+            if not line:
+                break
+            log.info("pot-server: %s", line.decode(errors="replace").rstrip())
+    except (asyncio.CancelledError, ValueError, OSError):
+        pass
+
+
 async def run_pot_provider() -> asyncio.subprocess.Process | None:
     """Запускает Node-сервер PO-токенов и ждёт, пока он поднимется.
 
@@ -74,6 +91,7 @@ async def run_pot_provider() -> asyncio.subprocess.Process | None:
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.PIPE,
     )
+    reader = asyncio.create_task(_drain_stderr(proc))
     try:
         # Ждём до 30 секунд, но выходим раньше, если процесс уже умер —
         # подвешенный на 30с контейнер при каждом рестарте не нужен.
@@ -95,6 +113,7 @@ async def run_pot_provider() -> asyncio.subprocess.Process | None:
                 f"сервер PO-токенов не ответил на {POT_PROVIDER_URL}/ping за 30s"
             )
     except PotProviderError:
+        reader.cancel()
         if proc.returncode is None:
             proc.terminate()
             try:
