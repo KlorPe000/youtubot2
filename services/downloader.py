@@ -105,22 +105,42 @@ def find_url(text: str) -> str | None:
 
 
 def _debug_opts() -> dict:
-    """Включает verbose yt-dlp, когда YTDLP_DEBUG=1 — для диагностики PO-токенов."""
+    """Включает verbose yt-dlp, когда YTDLP_DEBUG=1 — для диагностики PO-токенов.
+
+    Плюс `youtube:pot_trace=true`: директор PO-токенов выводит трассировку
+    (какой провайдер выбран, принят/отклонён запрос) только на TRACE-уровне,
+    который без этого арга не печатается даже в verbose-режиме.
+    """
     if os.getenv("YTDLP_DEBUG") not in ("1", "true", "True"):
         return {}
     # main.py ставит root-логгер на INFO — без этого DEBUG-строки yt-dlp
     # (генерация PO-токена, ошибки провайдера) молча отфильтровываются.
     logger = logging.getLogger("yt_dlp.debug")
     logger.setLevel(logging.DEBUG)
-    return {"verbose": True, "logger": logger}
+    return {
+        "verbose": True,
+        "logger": logger,
+        "extractor_args": {"youtube": {"pot_trace": ["true"]}},
+    }
+
+
+def _merge_opts(base: dict, extra: dict) -> dict:
+    """Опции, но extractor_args из extra вкладываются, а не заменяют целиком."""
+    merged = {**base, **{k: v for k, v in extra.items() if k != "extractor_args"}}
+    if "extractor_args" in extra:
+        merged_args = dict(base.get("extractor_args") or {})
+        for ie_key, args in extra["extractor_args"].items():
+            merged_args[ie_key] = {**(merged_args.get(ie_key) or {}), **args}
+        merged["extractor_args"] = merged_args
+    return merged
 
 
 def _probe(url: str) -> dict:
     """Смотрим метаданные не скачивая — чтобы отсеять длинное до загрузки."""
     opts = {"quiet": True, "no_warnings": True, "noplaylist": True, "skip_download": True}
-    opts.update(_auth_opts())
-    opts.update(_pot_opts())
-    opts.update(_debug_opts())
+    opts = _merge_opts(opts, _auth_opts())
+    opts = _merge_opts(opts, _pot_opts())
+    opts = _merge_opts(opts, _debug_opts())
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
             return ydl.extract_info(url, download=False)
@@ -199,8 +219,9 @@ def download(url: str) -> Track:
             {"key": "EmbedThumbnail", "already_have_thumbnail": False},
         ],
     }
-    opts.update(_auth_opts())
-    opts.update(_pot_opts())
+    opts = _merge_opts(opts, _auth_opts())
+    opts = _merge_opts(opts, _pot_opts())
+    opts = _merge_opts(opts, _debug_opts())
 
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
