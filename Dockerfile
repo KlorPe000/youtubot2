@@ -2,16 +2,21 @@
 FROM node:22-bookworm-slim AS builder
 
 # canvas собирает native-модуль — нужны инструменты и системные библиотеки.
+# ca-certificates + curl нужны, чтобы скачать исходники сервера по HTTPS.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       python3 build-essential git \
+       python3 build-essential ca-certificates curl \
        libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Кладём сервер провайдера и собираем его TypeScript-исходники.
-RUN git clone --depth 1 --branch 1.3.2 \
-        https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git \
-        /opt/pot-provider \
+ARG POT_TAG=1.3.2
+RUN curl -fsSL \
+        "https://github.com/Brainicism/bgutil-ytdlp-pot-provider/archive/refs/tags/${POT_TAG}.tar.gz" \
+        -o /tmp/pot.tar.gz \
+    && mkdir -p /opt/pot-provider \
+    && tar -xzf /tmp/pot.tar.gz -C /opt/pot-provider --strip-components=1 \
+    && rm /tmp/pot.tar.gz \
     && cd /opt/pot-provider/server \
     && npm ci --no-audit --no-fund \
     && npx tsc
