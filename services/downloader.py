@@ -48,20 +48,27 @@ def _auth_opts() -> dict:
 
 
 def _pot_opts() -> dict:
-    """Направляем yt-dlp к локальному генератору PO-токенов.
+    """Включаем node как JS-рантайм и направляем yt-dlp к генератору PO-токенов.
 
     Плагин `bgutil-ytdlp-pot-provider` (уже в requirements.txt) умеет ходить
     за proof-of-origin токеном к HTTP-серверу и по умолчанию уже знает адрес
-    127.0.0.1:4416. Здесь мы лишь явно задаём адрес и включаем механизм —
-    это убирает блокировку "Sign in to confirm you're not a bot" с серверных IP.
+    127.0.0.1:4416. Здесь мы явно задаём адрес и подключаем node: без активного
+    JS-рантайма yt-dlp не выполняет BotGuard-челлендж и не может получить токен,
+    поэтому извлечение падает на бот-проверке "Sign in to confirm you're not a bot".
     """
     if not POT_ENABLED:
         return {}
-    return {
+    opts: dict = {
         "extractor_args": {
             "youtubepot-bgutilhttp": {"base_url": [POT_PROVIDER_URL]},
         },
     }
+    node = shutil.which("node")
+    if node:
+        opts["js_runtimes"] = {"node": {"path": node}}
+    else:
+        log.warning("node не найден в системе — PO-токены могут не работать")
+    return opts
 
 
 YOUTUBE_URL_RE = re.compile(
