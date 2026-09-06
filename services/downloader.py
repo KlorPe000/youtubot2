@@ -52,15 +52,18 @@ def _pot_opts() -> dict:
 
     Плагин `bgutil-ytdlp-pot-provider` (уже в requirements.txt) умеет ходить
     за proof-of-origin токеном к HTTP-серверу и по умолчанию уже знает адрес
-    127.0.0.1:4416. Здесь мы явно задаём адрес и подключаем node: без активного
-    JS-рантайма yt-dlp не выполняет BotGuard-челлендж и не может получить токен,
-    поэтому извлечение падает на бот-проверке "Sign in to confirm you're not a bot".
+    127.0.0.1:4416. Здесь мы явно задаём адрес, подключаем node и форсируем
+    генерацию токена (`youtube:fetch_pot=always`). Без форсирования yt-dlp
+    запрашивает PO-токен только когда его политика клиента это требует,
+    а для web-клиента по умолчанию required=False — оттуда и вечная
+    бот-проверка "Sign in to confirm you're not a bot".
     """
     if not POT_ENABLED:
         return {}
     opts: dict = {
         "extractor_args": {
             "youtubepot-bgutilhttp": {"base_url": [POT_PROVIDER_URL]},
+            "youtube": {"fetch_pot": ["always"]},
         },
     }
     node = shutil.which("node")
