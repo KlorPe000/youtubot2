@@ -57,13 +57,25 @@ def _pot_opts() -> dict:
     запрашивает PO-токен только когда его политика клиента это требует,
     а для web-клиента по умолчанию required=False — оттуда и вечная
     бот-проверка "Sign in to confirm you're not a bot".
+
+    `youtube:webpage_skip=player_response` — критично: для клиента web yt-dlp
+    берёт player response прямо из HTML страницы (`_video.py:_extract_player_responses`)
+    и тогда не запрашивает PLAYER PO-токен вовсе. А единственный дефолтный
+    клиент, где запрос всё-таки шёл (visionos), bgutil:http не поддерживает
+    ("Client VISIONOS is not supported"). Скипаем ответ со страницы -> для web
+    pr=None -> yt-dlp фетчит PLAYER токен через bgutil и вызывает player API
+    уже с токеном.
     """
     if not POT_ENABLED:
         return {}
     opts: dict = {
         "extractor_args": {
             "youtubepot-bgutilhttp": {"base_url": [POT_PROVIDER_URL]},
-            "youtube": {"fetch_pot": ["always"]},
+            "youtube": {
+                "fetch_pot": ["always"],
+                "player_client": ["web"],
+                "webpage_skip": ["player_response"],
+            },
         },
     }
     node = shutil.which("node")
