@@ -64,6 +64,11 @@ async def run_pot_provider() -> asyncio.subprocess.Process | None:
     proc = await asyncio.create_subprocess_exec(
         "node",
         script.name,
+        # Сервер обязан слушать только loopback: на 0.0.0.0 его поднимать
+        # нельзя — доступ к неаутентифицированному генератору токенов открыт
+        # наружу и опасен.
+        "--host",
+        "127.0.0.1",
         cwd=str(script.parent),
         stdout=asyncio.subprocess.DEVNULL,
         stderr=asyncio.subprocess.DEVNULL,
